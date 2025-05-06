@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <title>{{ title }}</title>
+  <!-- Bootstrap CSS -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+
+<body class="bg-light">
+  <div class="container py-5">
+    <div class="row mb-4">
+      <div class="col">
+        <h1 class="display-4">{{ title }}</h1>
+        <h2 class="h5">Welcome {{ user.get("name") }}!</h2>
+      </div>
+      <div class="col text-end">
+        <a href="{{ url_for('identity.logout') }}" class="btn btn-outline-danger">Logout</a>
+      </div>
+    </div>
+
+    <div class="row mb-3">
+      <div class="col-md-6 mb-2">
+        <button id="callApiBtn" class="btn btn-primary w-100">Call API</button>
+      </div>
+      <div class="col-md-6 mb-2">
+        <button id="callLlmBtn" class="btn btn-success w-100">Call LLM API</button>
+      </div>
+    </div>
+
+    <div id="result" class="d-none"></div>
+
+    {% if api_endpoint %}
+    <div class="mb-3">
+      <!-- If an API endpoint is declared and scopes defined, this link will show. We set this in the call an API tutorial. For this tutorial, we do not define this endpoint. -->
+      <a href='/call_api' class="btn btn-secondary">Call an API</a>
+    </div>
+    {% endif %}
+
+    <hr>
+    <footer class="text-end text-muted">{{ title }}</footer>
+  </div>
+
+  <!-- Bootstrap JS and dependencies -->
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+  <!-- Marked.js for Markdown rendering -->
+  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+  <script>
+    document.getElementById('callApiBtn').addEventListener('click', function (e) {
+      e.preventDefault();
+      fetch('/api/get_info')
+        .then(response => response.json())
+        .then(data => showApiResult(data))
+        .catch(err => showError('Error: ' + err));
+    });
+
+    document.getElementById('callLlmBtn').addEventListener('click', function (e) {
+      e.preventDefault();
+      fetch('/api/llm')
+        .then(response => response.json())
+        .then(data => showLlmResult(data))
+        .catch(err => showError('Error: ' + err));
+    });
+
+    function showApiResult(data) {
+      const resultDiv = document.getElementById('result');
+      resultDiv.classList.remove('d-none');
+      if (data.machines && Array.isArray(data.machines)) {
+        // Build table
+        let table = `<div class="table-responsive"><table class="table table-striped table-bordered"><thead><tr>`;
+        // Table headers from keys of first machine
+        const headers = Object.keys(data.machines[0]);
+        headers.forEach(h => { table += `<th>${h.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}</th>`; });
+        table += `</tr></thead><tbody>`;
+        data.machines.forEach(machine => {
+          table += '<tr>';
+          headers.forEach(h => { table += `<td>${machine[h]}</td>`; });
+          table += '</tr>';
+        });
+        table += '</tbody></table></div>';
+        resultDiv.innerHTML = table;
+      } else {
+        resultDiv.innerHTML = `<pre class="alert alert-info">${escapeHtml(JSON.stringify(data, null, 2))}</pre>`;
+      }
+    }
+
+    function showLlmResult(data) {
+      const resultDiv = document.getElementById('result');
+      resultDiv.classList.remove('d-none');
+      if (data.result) {
+        // Use marked.js to render markdown
+        resultDiv.innerHTML = `<div class="alert alert-info">${marked.parse(data.result)}</div>`;
+      } else {
+        resultDiv.innerHTML = `<pre class="alert alert-info">${escapeHtml(JSON.stringify(data, null, 2))}</pre>`;
+      }
+    }
+
+    function showError(msg) {
+      const resultDiv = document.getElementById('result');
+      resultDiv.classList.remove('d-none');
+      resultDiv.innerHTML = `<div class="alert alert-danger">${escapeHtml(msg)}</div>`;
+    }
+
+    // Helper to escape HTML
+    function escapeHtml(text) {
+      return text
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/\"/g, "&quot;")
+        .replace(/'/g, "&#039;");
+    }
+  </script>
+</body>
+
+</html>

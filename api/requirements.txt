@@ -1,0 +1,4 @@
+# requirements for app api
+fastapi
+msal
+uvicorn
